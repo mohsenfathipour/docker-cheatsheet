@@ -1,0 +1,47 @@
+version: '3'
+services:
+  mysql:
+    image: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    restart: unless-stopped
+    container_name: ${APP_NAME:?err}-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?err}
+
+  adminer:
+    image: adminer
+    restart: unless-stopped
+    container_name: ${APP_NAME:?err}-adminer
+    ports:
+      - 8080:8080
+  php:
+    build:
+      context: ./dockerfiles
+      dockerfile: php.dockerfile
+    container_name: ${APP_NAME:?err}-php
+    volumes:
+      - ./src:/var/www/html
+    depends_on:
+        - mysql
+  
+  npm:
+    image: node
+    container_name: ${APP_NAME:?err}-npm
+    volumes:
+      - ./src:/var/www/html
+    ports:
+      - 3000:3000
+      - 3001:3001
+    working_dir: /var/www/html
+    entrypoint: ['npm']
+
+  nginx:
+    image: nginx
+    container_name: ${APP_NAME:?err}-nginx
+    ports:
+        - '80:80'
+    links:
+        - 'php'
+    volumes:
+        - './src:/var/www/html'
+        - './config/nginx:/etc/nginx/conf.d'
